@@ -70,7 +70,7 @@ export class OfflineMatchesService {
           POD_NAME: jobName,
           NAMESPACE: "5stack",
           GAME_SERVER_NODE_ID: gameServerNodeId,
-          PLUGIN_IMAGE: "ghcr.io/5stackgg/game-server:latest",
+          PLUGIN_IMAGE: "ghcr.io/marcobrunodev/game-server:banana-server",
           SERVER_PORT: serverPort.toString(),
           TV_PORT: tvPort.toString(),
           RCON_PASSWORD: matchData.id,

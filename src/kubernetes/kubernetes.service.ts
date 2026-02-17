@@ -221,7 +221,7 @@ export class KubernetesService {
 
   public async hasGameServerImage() {
     const output = child_process.execSync(
-      `ctr -a /containerd.sock -n k8s.io images ls | grep -q 'ghcr.io/5stackgg/game-server:latest' && echo "true" || echo "false"`,
+      `ctr -a /containerd.sock -n k8s.io images ls | grep -q 'ghcr.io/marcobrunodev/game-server:banana-server' && echo "true" || echo "false"`,
       { encoding: "utf8" },
     );
     return output.trim() === "true";
