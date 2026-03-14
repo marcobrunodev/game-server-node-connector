@@ -90,6 +90,7 @@ export class SystemService {
       supportsLowLatency,
       supportsCpuPinning,
       csBuild: await this.getCsVersion(),
+      csgoBuild: await this.getCsgoBuildId(),
       node: this.nodeName,
       cpuGovernorInfo: await this.getCPUFrequncyGovernorInfo(),
       cpuFrequencyInfo: await this.getCPUFrequncyInfo(),
@@ -103,6 +104,24 @@ export class SystemService {
 
     const version = execSync(
       "cat /serverfiles/steamapps/appmanifest_730.acf",
+    ).toString();
+
+    const parsed = vdf.parse(version) as {
+      AppState?: {
+        buildid?: number;
+      };
+    };
+
+    return parsed?.AppState?.buildid;
+  }
+
+  private async getCsgoBuildId() {
+    if (!fs.existsSync("/serverfiles-csgo/steamapps/appmanifest_740.acf")) {
+      return;
+    }
+
+    const version = execSync(
+      "cat /serverfiles-csgo/steamapps/appmanifest_740.acf",
     ).toString();
 
     const parsed = vdf.parse(version) as {
@@ -157,7 +176,7 @@ export class SystemService {
 
   private async getCPUFrequncyInfo(): Promise<{
     model: string;
-    frequency: Record<number, string>;
+    frequency: string;
     cpus: Record<number, string>;
   }> {
     let cpuGHz = await this.getCPUFrequncyInfoFromModel();
@@ -172,35 +191,27 @@ export class SystemService {
 
     const currentFrequencies = await this.getCurrentCPUFrequencyInfo();
 
-    return {
-      model: await this.getCpuModelInfo(),
-      frequency:
-        cpuGHz ||
-        Math.max(...Object.values(currentFrequencies).map(Number)).toString() ||
-        "unknown",
-      cpus: currentFrequencies,
-    };
-  }
+    // Primary: use static source if available
+    let frequency: string;
+    if (cpuGHz) {
+      frequency = cpuGHz;
+    } else {
+      // Fallback: use highest detected frequency from /proc/cpuinfo
+      const currentMaxGHz =
+        Object.values(currentFrequencies).length > 0
+          ? (
+              Math.max(...Object.values(currentFrequencies).map(Number)) / 1000
+            ).toString()
+          : undefined;
 
-  private async getCPUFrequncyInfoFromFiles() {
-    const frequencies: Record<number, string> = {};
-    const cpuFrequencyFiles = glob.sync(
-      "/host-cpu/cpu*/cpufreq/cpuinfo_max_freq",
-    );
-
-    for (const file of cpuFrequencyFiles) {
-      try {
-        frequencies[
-          parseInt(
-            path.basename(path.dirname(path.dirname(file))).replace("cpu", ""),
-          )
-        ] = fs.readFileSync(file, "utf8").trim();
-      } catch (error) {
-        this.logger.error(`Error getting CPU frequency [${file}]: ${error}`);
-      }
+      frequency = currentMaxGHz || "unknown";
     }
 
-    return frequencies;
+    return {
+      model: await this.getCpuModelInfo(),
+      frequency,
+      cpus: currentFrequencies,
+    };
   }
 
   private async getCurrentCPUFrequencyInfo() {
